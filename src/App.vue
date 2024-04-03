@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import classNames from "classnames";
 import "./app.less";
@@ -92,7 +93,7 @@ const toggleRandomLunch = () => {
           }, 1000);
         }, 1000);
       }, 0);
-    }, 50);
+    }, 50) as any;
   } else {
     clearInterval(randomingTimer.value);
     randomingTimer.value = 0;
