@@ -1,124 +1,150 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import classNames from 'classnames'
-import './app.less'
+import classNames from "classnames";
+import "./app.less";
 
 // 组件自动注册
-import FlickerFont from './components/FlickerFont.vue'
+import FlickerFont from "./components/FlickerFont.vue";
 
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
 // import HelloWorld from './components/HelloWorld.vue'
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive } from "vue";
 
-const lunch = ref<string>('馄饨 拉面 烩面 热干面 刀削面 油泼面 炸酱面 炒面 重庆小面 米线 酸辣粉 土豆粉 螺狮粉 凉皮… 川菜 麻辣香锅 火锅 酸菜鱼 烤串 披萨 烤鸭 汉堡 炸鸡 寿司 蟹黄包 煎饼果子 生煎 炒年糕')
+const lunch = ref<string>(
+  "馄饨 拉面 烩面 热干面 刀削面 油泼面 炸酱面 炒面 重庆小面 米线 酸辣粉 土豆粉 螺狮粉 凉皮… 川菜 麻辣香锅 火锅 酸菜鱼 烤串 披萨 烤鸭 汉堡 炸鸡 寿司 蟹黄包 煎饼果子 生煎 炒年糕",
+);
 const lunches = computed(() => {
-  return lunch.value.trim().split(/\s+/)
-})
+  return lunch.value.trim().split(/\s+/);
+});
 
 // 属性和方法无需返回，直接使用，使用`ref`,`reactive`定义响应式数据；使用`computed`定义计算属性数据
 // 是否正在随机食物
-const isRandoming = ref<boolean>(false)
+const isRandoming = ref<boolean>(false);
 // 已经随机食物次数
-const randomedCount = ref<number>(1)
+const randomedCount = ref<number>(1);
 // 正在随机食物定时器
-const randomingTimer = ref<number>(0)
+const randomingTimer = ref<number>(0);
 // 随机到的食物
-const randomedLunch = ref<string>()
+const randomedLunch = ref<string>();
 
-const flickerLunches = reactive<{
-  uuid: string,
-  name: string,
-  top: number,
-  left: number,
-  fontSize: number,
-  show: boolean,
-}[]>([])
+const flickerLunches = reactive<
+  {
+    uuid: string;
+    name: string;
+    top: number;
+    left: number;
+    fontSize: number;
+    show: boolean;
+  }[]
+>([]);
 
 function uuid() {
-  return [8, 4, 4, 4, 12].map((len) => (Math.random().toString(16).slice(2, len + 2))).join('-')
+  return [8, 4, 4, 4, 12]
+    .map((len) =>
+      Math.random()
+        .toString(16)
+        .slice(2, len + 2),
+    )
+    .join("-");
 }
 // 开始/停止随机食物
 const toggleRandomLunch = () => {
   // 开始随机食物
   if (!isRandoming.value) {
     if (randomedCount.value >= 4) {
-      alert('这么作，今天别吃了！🐶')
-      randomedCount.value ++
-      return
+      alert("这么作，今天别吃了！🐶");
+      randomedCount.value++;
+      return;
     }
 
-    randomedCount.value ++
+    randomedCount.value++;
     randomingTimer.value = setInterval(() => {
-      const filteredLunches = lunches.value.filter((item: string) => (item !== randomedLunch.value))
-      const name = filteredLunches[~~(Math.random() * filteredLunches.length)]
-      randomedLunch.value = name
+      const filteredLunches = lunches.value.filter(
+        (item: string) => item !== randomedLunch.value,
+      );
+      const name = filteredLunches[~~(Math.random() * filteredLunches.length)];
+      randomedLunch.value = name;
       const flickerLunch = reactive({
         uuid: uuid(),
         name,
-        top: ~~(Math.random() * window.document.documentElement.getBoundingClientRect().height),
-        left: ~~(Math.random() * (window.document.documentElement.getBoundingClientRect().width - 50)),
+        top: ~~(
+          Math.random() *
+          window.document.documentElement.getBoundingClientRect().height
+        ),
+        left: ~~(
+          Math.random() *
+          (window.document.documentElement.getBoundingClientRect().width - 50)
+        ),
         fontSize: ~~(Math.random() * (lunches.value.length - 14) + 14),
         show: false,
-      })
+      });
 
-      flickerLunches.push(flickerLunch)
+      flickerLunches.push(flickerLunch);
       setTimeout(() => {
-        flickerLunch.show = true
+        flickerLunch.show = true;
 
         setTimeout(() => {
-          flickerLunch.show = false
+          flickerLunch.show = false;
 
           setTimeout(() => {
-            const index = flickerLunches.indexOf(flickerLunch)
-            flickerLunches.splice(index, 1)
-          }, 1000)
-        }, 1000)
-      }, 0)
-    }, 50)
+            const index = flickerLunches.indexOf(flickerLunch);
+            flickerLunches.splice(index, 1);
+          }, 1000);
+        }, 1000);
+      }, 0);
+    }, 50) as any;
   } else {
-    clearInterval(randomingTimer.value)
-    randomingTimer.value = 0
+    clearInterval(randomingTimer.value);
+    randomingTimer.value = 0;
   }
-  isRandoming.value = !isRandoming.value
-}
+  isRandoming.value = !isRandoming.value;
+};
 
 // 获得当前按钮的文案
 const btnContent = computed(() => {
   if (isRandoming.value) {
-    return '停止'
+    return "停止";
   }
 
   if (randomedCount.value === 1) {
-    return '开始'
+    return "开始";
   }
 
-  return '不喜欢，换一个'
-})
-
+  return "不喜欢，换一个";
+});
 </script>
 
 <template>
   <div class="container">
     <textarea class="input textarea hidden" :value="lunch"></textarea>
     <div class="panel">
-      <h1 class="header" v-text="isRandoming ? '中午吃什么？吃什么？' : '中午吃什么，吃这个！'"></h1>
+      <h1
+        class="header"
+        v-text="isRandoming ? '中午吃什么？吃什么？' : '中午吃什么，吃这个！'"
+      ></h1>
       <h2 class="random-content" v-text="randomedLunch"></h2>
       <button
         class="btn btn-default btn-start"
         :class="classNames({ 'v-hidden': randomedCount > 4 })"
-        v-text="btnContent" @click="toggleRandomLunch"
+        v-text="btnContent"
+        @click="toggleRandomLunch"
       />
     </div>
 
-    <transition name="fade" v-for="flickerLunch in flickerLunches" :key="flickerLunch.uuid">
+    <transition
+      name="fade"
+      v-for="flickerLunch in flickerLunches"
+      :key="flickerLunch.uuid"
+    >
       <flicker-font
         v-show="flickerLunch.show"
         :top="flickerLunch.top"
         :left="flickerLunch.left"
         :font-size="flickerLunch.fontSize"
       >
-          <span v-text="flickerLunch.name"></span>
-        </flicker-font>
+        <span v-text="flickerLunch.name"></span>
+      </flicker-font>
     </transition>
   </div>
 </template>
@@ -200,7 +226,7 @@ const btnContent = computed(() => {
   padding: 0;
   font-variant: tabular-nums;
   list-style: none;
-  font-feature-settings: 'tnum';
+  font-feature-settings: "tnum";
   position: relative;
   display: inline-block;
   width: 100%;
@@ -221,7 +247,9 @@ const btnContent = computed(() => {
     min-height: 36px;
     line-height: 1.7;
     vertical-align: bottom;
-    transition: all 0.3s, height 0s;
+    transition:
+      all 0.3s,
+      height 0s;
   }
 
   &:focus {

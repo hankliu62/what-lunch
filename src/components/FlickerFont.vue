@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from "vue";
 
 const props = defineProps<{
-  top: number,
-  left: number,
-  fontSize: number
-}>()
+  top: number;
+  left: number;
+  fontSize: number;
+}>();
 
 const style = computed(() => {
   return {
@@ -13,16 +13,12 @@ const style = computed(() => {
     left: `${props.left}px`,
     fontSize: `${props.fontSize}px`,
     color: `rgba(0, 0, 0, ${Math.random()})`,
-  }
-})
-
+  };
+});
 </script>
 
 <template>
-  <span
-    class="flicker-font"
-    :style="style"
-  >
+  <span class="flicker-font" :style="style">
     <slot />
   </span>
 </template>
@@ -32,4 +28,3 @@ const style = computed(() => {
   position: absolute;
 }
 </style>
-
