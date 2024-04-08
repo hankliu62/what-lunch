@@ -6,6 +6,8 @@ import "./app.less";
 // 组件自动注册
 import FlickerFont from "./components/FlickerFont.vue";
 
+import { isMobile } from "./utils/platform";
+
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
 // import HelloWorld from './components/HelloWorld.vue'
@@ -27,6 +29,12 @@ const randomedCount = ref<number>(1);
 const randomingTimer = ref<number>(0);
 // 随机到的食物
 const randomedLunch = ref<string>();
+
+const link = computed(() =>
+  isMobile()
+    ? `https://m.dianping.com/shoplist/1/search?from=m_search&keyword=${randomedLunch.value}`
+    : `https://www.dianping.com/search/keyword/203/0_${randomedLunch.value}`,
+);
 
 const flickerLunches = reactive<
   {
@@ -123,7 +131,14 @@ const btnContent = computed(() => {
         class="header"
         v-text="isRandoming ? '中午吃什么？吃什么？' : '中午吃什么，吃这个！'"
       ></h1>
-      <h2 class="random-content" v-text="randomedLunch"></h2>
+      <h2 class="random-content">
+        <a
+          class="random-link"
+          :href="link"
+          v-text="randomedLunch"
+          rel="noreferrer noopener"
+        ></a>
+      </h2>
       <button
         class="btn btn-default btn-start"
         :class="classNames({ 'v-hidden': randomedCount > 4 })"
@@ -176,6 +191,16 @@ const btnContent = computed(() => {
       margin-bottom: 50px;
       font-weight: 300;
       font-size: 2.5em;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .panel {
+      width: 90%;
+      .header {
+        font-size: 2.2em;
+        text-align: center;
+      }
     }
   }
 }
@@ -269,6 +294,12 @@ const btnContent = computed(() => {
   color: #ff9733;
   font-size: 2em;
   height: 40px;
+
+  .random-link {
+    color: #ff9733;
+    text-decoration: none;
+    cursor: pointer;
+  }
 }
 
 .hidden {
