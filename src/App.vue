@@ -3,16 +3,16 @@
  * What-Lunch 2.0
  * 高级感美食随机选择器
  */
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import "./app.less";
 
 // 组件
 import AnimatedBackground from "./components/AnimatedBackground.vue";
-import FoodCard from "./components/FoodCard.vue";
+import SlotMachine from "./components/SlotMachine.vue";
 import MapSelector from "./components/MapSelector.vue";
 
 // 数据
-import { getRandomFood, type FoodItem } from "./data/foods";
+import { foodsData, type FoodItem } from "./data/foods";
 
 // 工具
 import {
@@ -32,17 +32,14 @@ const isRandoming = ref(false);
 // 随机次数
 const randomCount = ref(1);
 
-// 是否显示食物卡片
-const isCardVisible = ref(false);
+// 是否显示搜索按钮
+const showSearchButton = ref(false);
 
 // 是否显示地图选择器
 const showMapSelector = ref(false);
 
 // 用户位置
 const userLocation = ref<{ latitude: number; longitude: number } | null>(null);
-
-// 随机定时器
-let randomTimer: ReturnType<typeof setInterval> | null = null;
 
 // ==================== 计算属性 ====================
 
@@ -53,17 +50,12 @@ const btnText = computed(() => {
   return "换一个";
 });
 
-// 是否显示搜索按钮
-const showSearchButton = computed(() => {
-  return !isRandoming.value && currentFood.value && randomCount.value > 1;
-});
-
 // ==================== 方法 ====================
 
 // 开始/停止随机
 function toggleRandom() {
   if (isRandoming.value) {
-    stopRandom();
+    isRandoming.value = false;
   } else {
     startRandom();
   }
@@ -80,35 +72,20 @@ function startRandom() {
 
   randomCount.value++;
   isRandoming.value = true;
-  isCardVisible.value = false;
-
-  // 快速切换食物
-  randomTimer = setInterval(() => {
-    const food = getRandomFood();
-    // 避免和当前食物重复
-    if (food.name !== currentFood.value?.name) {
-      currentFood.value = food;
-    }
-  }, 80);
+  showSearchButton.value = false;
 }
 
-// 停止随机
-function stopRandom() {
-  if (randomTimer) {
-    clearInterval(randomTimer);
-    randomTimer = null;
-  }
+// 滚动结束
+function handleSpinEnd(food: FoodItem) {
+  currentFood.value = food;
   isRandoming.value = false;
 
-  // 确保有选中的食物
-  if (!currentFood.value) {
-    currentFood.value = getRandomFood();
+  // 显示搜索按钮
+  if (randomCount.value > 1) {
+    setTimeout(() => {
+      showSearchButton.value = true;
+    }, 500);
   }
-
-  // 延迟显示卡片动画
-  setTimeout(() => {
-    isCardVisible.value = true;
-  }, 100);
 }
 
 // 打开地图选择器
@@ -150,18 +127,7 @@ async function handleMapSelect(platform: string) {
 
 onMounted(() => {
   // 初始化随机一个食物
-  currentFood.value = getRandomFood();
-
-  // 初始显示
-  setTimeout(() => {
-    isCardVisible.value = true;
-  }, 300);
-});
-
-onUnmounted(() => {
-  if (randomTimer) {
-    clearInterval(randomTimer);
-  }
+  currentFood.value = foodsData[Math.floor(Math.random() * foodsData.length)];
 });
 </script>
 
@@ -177,12 +143,11 @@ onUnmounted(() => {
         {{ isRandoming ? "选啥好呢..." : "中午吃什么" }}
       </h1>
 
-      <!-- 食物卡片 -->
-      <FoodCard
-        v-if="currentFood"
-        :food-name="currentFood.name"
-        :food-image="currentFood.image"
-        :is-visible="isCardVisible"
+      <!-- 滚动选择器 -->
+      <SlotMachine
+        :foods="foodsData"
+        :is-spinning="isRandoming"
+        @spin-end="handleSpinEnd"
       />
 
       <!-- 主按钮 -->
@@ -312,7 +277,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 

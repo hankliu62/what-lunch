@@ -59,6 +59,15 @@ export function isGeolocationSupported(): boolean {
 }
 
 /**
+ * 判断是否移动端
+ */
+export function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
+}
+
+/**
  * 构建地图搜索 URL
  */
 export function buildMapUrl(
@@ -67,34 +76,35 @@ export function buildMapUrl(
   location?: Location,
 ): string {
   const encodedKeyword = encodeURIComponent(keyword);
+  const isMobile = isMobileDevice();
 
   switch (platform) {
     case "dianping":
       // 大众点评
-      if (location) {
-        return `https://m.dianping.com/shoplist/1/search?from=m_search&keyword=${encodedKeyword}`;
+      if (isMobile) {
+        // 移动端：使用搜索频道页
+        return `https://www.dianping.com/search/keyword/203/0_${encodedKeyword}`;
       }
+      // PC端：直接搜索
       return `https://www.dianping.com/search/keyword/203/0_${encodedKeyword}`;
 
     case "baidu":
       // 百度地图
       if (location) {
+        // 有位置时：使用附近搜索
         return `https://map.baidu.com/search/${encodedKeyword}/@${location.longitude},${location.latitude},15z`;
       }
+      // 无位置：全国搜索
       return `https://map.baidu.com/search/${encodedKeyword}/`;
 
     case "amap":
       // 高德地图
-      if (location) {
-        return `https://restapi.amap.com/v3/place/search?keywords=${encodedKeyword}&location=${location.longitude},${location.latitude}&radius=3000`;
-      }
+      // 使用高德网页搜索（不需要 API key）
       return `https://www.amap.com/search?query=${encodedKeyword}`;
 
     case "tencent":
       // 腾讯地图
-      if (location) {
-        return `https://apis.map.qq.com/jsapi?qt=nearby&lon=${location.longitude}&lat=${location.latitude}&keywords=${encodedKeyword}&reference=wd&height=100`;
-      }
+      // 使用腾讯地图网页版搜索
       return `https://map.qq.com/search/${encodedKeyword}`;
 
     default:
@@ -103,21 +113,58 @@ export function buildMapUrl(
 }
 
 /**
- * 获取地图 App 的 scheme（用于打开原生 App）
- * 注意：这些 scheme 可能因版本而异，部分 App 可能不支持
+ * 获取地图 App 的 Deep Link（用于打开原生 App）
+ * 这些 URL scheme 可以直接打开对应的地图 App
  */
-export function getMapAppScheme(
+export function getMapAppDeepLink(
   platform: MapPlatform,
   keyword: string,
-): string | null {
+  location?: Location,
+): string {
   const encodedKeyword = encodeURIComponent(keyword);
 
-  const schemes: Record<MapPlatform, string | null> = {
-    dianping: null, // 大众点评网页版更可靠
-    baidu: `baidumap://map/place/search?query=${encodedKeyword}&src=openapi`,
-    amap: `androidamap://openFeature?featureName=Search&query=${encodedKeyword}`,
-    tencent: null, // 腾讯地图 scheme 不够稳定
+  // App Deep Links（如果用户安装了 App 会直接打开）
+  const deepLinks: Record<MapPlatform, string> = {
+    dianping: `dianping://search?keyword=${encodedKeyword}`,
+    baidu: location
+      ? `baidumap://map/place/search?query=${encodedKeyword}&center=${location.latitude},${location.longitude}`
+      : `baidumap://map/place/search?query=${encodedKeyword}`,
+    amap: location
+      ? `androidamap://openFeature?featureName=Search&query=${encodedKeyword}&longitude=${location.longitude}&latitude=${location.latitude}`
+      : `androidamap://openFeature?featureName=Search&query=${encodedKeyword}`,
+    tencent: `qqmap://map/search?keyword=${encodedKeyword}`,
   };
 
-  return schemes[platform];
+  return deepLinks[platform];
+}
+
+/**
+ * 打开地图（优先尝试 App，失败则使用网页版）
+ */
+export async function openMap(
+  platform: MapPlatform,
+  keyword: string,
+  location?: Location,
+): Promise<void> {
+  const deepLink = getMapAppDeepLink(platform, keyword, location);
+  const webUrl = buildMapUrl(platform, keyword, location);
+
+  // 尝试打开 App
+  try {
+    // 使用 iframe 尝试打开 App（更安静地失败）
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = deepLink;
+    document.body.appendChild(iframe);
+
+    // 设置超时后使用网页版
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      // 如果 2 秒后 iframe 还在，说明 App 没有打开
+      window.open(webUrl, "_blank", "noopener,noreferrer");
+    }, 1500);
+  } catch {
+    // 如果出错，直接使用网页版
+    window.open(webUrl, "_blank", "noopener,noreferrer");
+  }
 }
