@@ -217,7 +217,7 @@ function startRandom() {
   const targetFood = foodsData[targetIndex];
 
   // 淡入淡出阶段参数
-  const totalRounds = 35; // 35轮，约35秒
+  const totalRounds = 25; // 25轮，约25秒
   let currentRound = 0;
 
   // 记录最近出现过的食物（避免连续重复）
@@ -460,7 +460,7 @@ onUnmounted(() => {
       <!-- 标题 -->
       <h1 class="app-title">
         <span v-if="isRandoming" class="title-scanning">🔍 AI分析中...</span>
-        <span v-else-if="!currentFood" class="title-wait">🎯 今日吃什么？</span>
+        <span v-else-if="!currentFood" class="title-wait">🎯 今天吃什么？</span>
         <span v-else class="title-result">✨ {{ currentFood.name }}</span>
       </h1>
 
@@ -783,20 +783,37 @@ onUnmounted(() => {
   color: #fff;
   background-size: 200% auto;
   background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: title-shimmer 3s linear infinite;
 }
 
 .title-wait {
+  display: inline-block;
+  background: linear-gradient(90deg, #00f5ff, #7b2cbf);
+  background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: title-pulse 2s ease-in-out infinite;
 }
 
 .title-result {
-  animation: title-glow 1.5s ease-in-out infinite alternate;
+  display: inline-block;
+  background: linear-gradient(90deg, #00f5ff, #7b2cbf, #00f5ff);
+  background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation:
+    title-shimmer 3s linear infinite,
+    title-glow 1.5s ease-in-out infinite alternate;
 }
 
 .title-scanning {
+  display: inline-block;
+  background: linear-gradient(90deg, #00f5ff, #00d4ff);
+  background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: title-scan 1s ease-in-out infinite;
 }
 
@@ -847,18 +864,23 @@ onUnmounted(() => {
 /* 当前食物展示 */
 .current-food {
   display: flex;
-  border: 2px solid rgb(255 215 0 / 30%);
-  border-radius: 24px;
-  padding: 30px 50px;
-  background: rgb(255 255 255 / 8%);
+  border: 3px solid rgb(0 245 255 / 50%);
+  border-radius: 32px;
+  padding: 50px 80px;
+  background: linear-gradient(
+    135deg,
+    rgb(0 40 60 / 90%) 0%,
+    rgb(0 20 40 / 95%) 100%
+  );
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 28px;
   box-shadow:
-    0 0 40px rgb(255 200 50 / 30%),
-    0 0 80px rgb(255 150 0 / 15%),
-    inset 0 0 30px rgb(255 255 255 / 5%);
-  backdrop-filter: blur(10px);
+    0 0 40px rgb(0 245 255 / 40%),
+    0 0 80px rgb(123 44 191 / 30%),
+    0 0 120px rgb(0 200 255 / 20%),
+    inset 0 0 40px rgb(0 245 255 / 5%);
+  backdrop-filter: blur(20px);
   animation: final-reveal-appear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -879,23 +901,30 @@ onUnmounted(() => {
 }
 
 .food-image {
-  border: 3px solid rgb(255 215 0 / 40%);
-  border-radius: 18px;
-  width: 180px;
-  height: 135px;
+  border: 4px solid rgb(0 245 255 / 60%);
+  border-radius: 24px;
+  width: 280px;
+  height: 210px;
   object-fit: cover;
-  box-shadow: 0 10px 40px rgb(0 0 0 / 60%);
+  box-shadow:
+    0 15px 50px rgb(0 0 0 / 60%),
+    0 0 30px rgb(0 245 255 / 30%);
 }
 
 .food-name {
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-shadow:
-    0 0 20px rgb(255 215 0 / 80%),
-    0 0 40px rgb(255 150 0 / 50%),
-    0 2px 8px rgb(0 0 0 / 50%);
-  color: #ffd700;
+    0 0 30px rgb(0 245 255 / 80%),
+    0 0 60px rgb(123 44 191 / 50%),
+    0 2px 10px rgb(0 0 0 / 50%);
+  background: linear-gradient(90deg, #00f5ff, #7b2cbf, #00f5ff);
+  background-size: 200% auto;
+  background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: title-shimmer 3s linear infinite;
 }
 
 /* 初始状态 */
