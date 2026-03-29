@@ -62,7 +62,7 @@ const fadeItems = ref<
 const preloadedImages = ref<Set<string>>(new Set());
 
 // 记录上一轮出现的食物，避免连续重复
-let lastFoodName = "";
+// let lastFoodName = "";
 
 // 粒子效果样式
 function getParticleStyle(n: number) {
@@ -108,42 +108,68 @@ function preloadImages() {
   });
 }
 
+// 卡片大小（占屏幕宽高的百分比）
+const CARD_WIDTH = 18;
+const CARD_HEIGHT = 25;
+
+// 生成不重叠的位置
+function generateNonOverlappingPosition(
+  existingPositions: { x: number; y: number }[],
+): { x: number; y: number } {
+  const minX = 10;
+  const maxX = 90 - CARD_WIDTH;
+  const minY = 10;
+  const maxY = 90 - CARD_HEIGHT;
+
+  for (let attempts = 0; attempts < 30; attempts++) {
+    const x = minX + Math.random() * (maxX - minX);
+    const y = minY + Math.random() * (maxY - minY);
+
+    let overlaps = false;
+    for (const pos of existingPositions) {
+      const dx = Math.abs(x - pos.x);
+      const dy = Math.abs(y - pos.y);
+      if (dx < CARD_WIDTH && dy < CARD_HEIGHT) {
+        overlaps = true;
+        break;
+      }
+    }
+
+    if (!overlaps) {
+      return { x, y };
+    }
+  }
+
+  return {
+    x: minX + Math.random() * (maxX - minX),
+    y: minY + Math.random() * (maxY - minY),
+  };
+}
+
 // 创建淡入淡出卡片 - 从边缘滑入
 function createFadeItem(
   food: FoodItem,
   currentRound: number,
-  // totalRounds: number,
+  position?: { x: number; y: number },
 ) {
-  // 从屏幕边缘随机位置出发，向中心区域移动
-  const edge = Math.floor(Math.random() * 4); // 0:上, 1:右, 2:下, 3:左
-  let startX: number, startY: number, endX: number, endY: number;
+  // 在页面中间区域随机位置显示（避免边缘）
+  let endX: number, endY: number;
 
-  // 目标位置在中心区域附近（35%-65%范围内，更集中）
-  endX = 35 + Math.random() * 30;
-  endY = 35 + Math.random() * 30;
-
-  switch (edge) {
-    case 0: // 上边
-      startX = 20 + Math.random() * 60;
-      startY = -5;
-      break;
-    case 1: // 右边
-      startX = 105;
-      startY = 20 + Math.random() * 60;
-      break;
-    case 2: // 下边
-      startX = 20 + Math.random() * 60;
-      startY = 105;
-      break;
-    case 3: // 左边
-    default:
-      startX = -5;
-      startY = 20 + Math.random() * 60;
-      break;
+  if (position) {
+    endX = position.x;
+    endY = position.y;
+  } else {
+    // 目标位置在页面中间区域（20%-75%范围内，确保完全显示）
+    endX = 20 + Math.random() * 55;
+    endY = 20 + Math.random() * 55;
   }
 
-  // 每个卡片随机旋转角度，-25 到 25 度之间，增加变化
-  const rotation = (Math.random() - 0.5) * 50;
+  // 起始位置和结束位置一样，直接淡入淡出
+  const startX = endX;
+  const startY = endY;
+
+  // 随机轻微旋转
+  const rotation = (Math.random() - 0.5) * 20;
 
   return {
     key: `${food.name}-${Date.now()}-${currentRound}-${Math.random()}`,
@@ -156,7 +182,7 @@ function createFadeItem(
     y: startY,
     scale: 0.6 + Math.random() * 0.4,
     rotation: rotation,
-    duration: 1.2 + Math.random() * 0.5, // 1.2-1.7秒
+    duration: 0.5 + Math.random() * 0.2, // 0.5-0.7秒，更短的动画
     imageLoaded: preloadedImages.value.has(food.image || ""),
   };
 }
@@ -184,22 +210,25 @@ function startRandom() {
   isRandoming.value = true;
   showSearchButton.value = false;
   fadeItems.value = [];
-  lastFoodName = ""; // 重置，避免连续重复
+  // lastFoodName = ""; // 重置，避免连续重复
 
   // 随机选择最终结果
   const targetIndex = Math.floor(Math.random() * foodsData.length);
   const targetFood = foodsData[targetIndex];
 
   // 淡入淡出阶段参数
-  const totalRounds = 10; // 10轮，加快节奏
+  const totalRounds = 35; // 35轮，约35秒
   let currentRound = 0;
+
+  // 记录最近出现过的食物（避免连续重复）
+  const recentFoods: string[] = [];
 
   function fadeRound() {
     if (!isRandoming.value) return;
 
     currentRound++;
 
-    // 随机选择食物，避免连续重复
+    // 随机选择食物，避免最近5次出现重复
     let food: FoodItem;
     let attempts = 0;
     do {
@@ -210,17 +239,64 @@ function startRandom() {
         food = foodsData[Math.floor(Math.random() * foodsData.length)];
       }
       attempts++;
-    } while (food.name === lastFoodName && attempts < 5);
+    } while (recentFoods.includes(food.name) && attempts < 20);
 
     // 记录这一轮的食物
-    lastFoodName = food.name;
+    // lastFoodName = food.name;
 
-    // 每次只显示一个卡片
-    const newItem = createFadeItem(food, currentRound, totalRounds);
-    fadeItems.value = [newItem];
+    // 随机生成1-3个卡片
+    const cardCount = 1 + Math.floor(Math.random() * 3);
+    const items: typeof fadeItems.value = [];
+    const existingPositions: { x: number; y: number }[] = [];
+    const thisRoundFoods: string[] = [];
 
-    // 卡片持续时间 - 缩短到 1.5-2秒，加快节奏
-    const roundDuration = 1500 + Math.random() * 500;
+    for (let i = 0; i < cardCount; i++) {
+      let cardFood: FoodItem;
+      let foodAttempts = 0;
+      do {
+        if (currentRound > totalRounds * 0.5 && Math.random() > 0.3) {
+          cardFood = targetFood;
+        } else {
+          cardFood = foodsData[Math.floor(Math.random() * foodsData.length)];
+        }
+        foodAttempts++;
+      } while (
+        (recentFoods.includes(cardFood.name) ||
+          thisRoundFoods.includes(cardFood.name)) &&
+        foodAttempts < 20
+      );
+
+      thisRoundFoods.push(cardFood.name);
+
+      const position = generateNonOverlappingPosition(existingPositions);
+      existingPositions.push(position);
+      const newItem = createFadeItem(cardFood, currentRound, position);
+      items.push(newItem);
+    }
+
+    for (const foodName of thisRoundFoods) {
+      recentFoods.push(foodName);
+      if (recentFoods.length > 5) {
+        recentFoods.shift();
+      }
+    }
+
+    // 分批添加卡片，带延迟
+    items.forEach((item, index) => {
+      const delay = 50 + Math.random() * 50;
+      setTimeout(() => {
+        fadeItems.value = [...fadeItems.value, item];
+      }, delay * index);
+    });
+
+    // 同时更新 recentFoods 数组
+    recentFoods.push(food.name);
+    if (recentFoods.length > 5) {
+      recentFoods.shift();
+    }
+
+    // 卡片持续时间 - 随机不固定（600ms-1400ms）
+    const roundDuration = 600 + Math.random() * 800;
 
     if (currentRound >= totalRounds) {
       // 最后一轮，结束
@@ -228,12 +304,12 @@ function startRandom() {
         revealFinal(targetFood);
       }, roundDuration);
     } else {
-      // 进入下一轮
+      // 进入下一轮，时间间隔也随机不固定
       setTimeout(() => {
         fadeItems.value = [];
-        // 短暂停顿后开始下一轮，缩短间隔
-        setTimeout(fadeRound, 150);
-      }, roundDuration - 300);
+        // 随机间隔后开始下一轮（50ms-300ms）
+        setTimeout(fadeRound, 50 + Math.random() * 250);
+      }, roundDuration - 200);
     }
   }
 
@@ -317,8 +393,7 @@ async function handleMapSelect(platform: string) {
 // ==================== 生命周期 ====================
 
 onMounted(() => {
-  // 初始化随机一个食物
-  currentFood.value = foodsData[Math.floor(Math.random() * foodsData.length)];
+  // 不再初始化随机食物，等待用户点击选择
   // 预加载所有图片
   preloadImages();
 });
@@ -334,7 +409,7 @@ onUnmounted(() => {
     <AnimatedBackground />
 
     <!-- 全局淡入淡出卡片层 -->
-    <div class="global-fade-layer">
+    <div v-if="isRandoming" class="global-fade-layer">
       <TransitionGroup name="fade-card" tag="div" class="fade-container">
         <div
           v-for="item in fadeItems"
@@ -384,13 +459,26 @@ onUnmounted(() => {
     <main class="main-content">
       <!-- 标题 -->
       <h1 class="app-title">
-        {{ isRandoming ? "选啥好呢..." : "中午吃什么" }}
+        <span v-if="isRandoming" class="title-scanning">🔍 AI分析中...</span>
+        <span v-else-if="!currentFood" class="title-wait">🎯 今日吃什么？</span>
+        <span v-else class="title-result">✨ {{ currentFood.name }}</span>
       </h1>
 
       <!-- 当前食物展示 -->
       <Transition name="food-reveal" mode="out-in">
+        <!-- 初始界面 - 未选择食物 -->
+        <div v-if="!currentFood && !isRandoming" class="initial-state">
+          <div class="initial-icon">🍴</div>
+          <div class="initial-text">点击按钮开始选择</div>
+        </div>
+        <!-- 随机选择中的动画 -->
+        <div v-else-if="isRandoming" class="selecting-indicator">
+          <div class="pulse-ring"></div>
+          <span>选择中...</span>
+        </div>
+        <!-- 显示最终结果 -->
         <div
-          v-if="currentFood && !isRandoming"
+          v-else-if="currentFood"
           :key="currentFood.name"
           class="current-food"
         >
@@ -402,10 +490,6 @@ onUnmounted(() => {
             loading="lazy"
           />
           <div class="food-name">{{ currentFood.name }}</div>
-        </div>
-        <div v-else-if="isRandoming" class="selecting-indicator">
-          <div class="pulse-ring"></div>
-          <span>选择中...</span>
         </div>
       </Transition>
 
@@ -474,51 +558,56 @@ onUnmounted(() => {
 .fade-card {
   position: absolute;
   display: flex;
-  border: 3px solid rgb(255 215 0 / 30%);
+  border: 3px solid rgb(0 255 255 / 50%);
   border-radius: 24px;
   padding: 28px 36px;
-  opacity: 0.7;
-  background: rgb(255 255 255 / 8%);
+  opacity: 0.85;
+  background: linear-gradient(
+    135deg,
+    rgb(0 20 40 / 85%) 0%,
+    rgb(0 40 60 / 75%) 50%,
+    rgb(0 20 40 / 85%) 100%
+  );
   flex-direction: column;
   align-items: center;
   gap: 16px;
   box-shadow:
-    0 0 40px rgb(255 200 50 / 30%),
-    0 0 60px rgb(255 150 0 / 15%),
-    inset 0 0 30px rgb(255 255 255 / 5%);
-  backdrop-filter: blur(16px);
+    0 0 30px rgb(0 255 255 / 40%),
+    0 0 60px rgb(0 200 255 / 20%),
+    0 0 100px rgb(0 150 255 / 10%),
+    inset 0 0 40px rgb(0 255 255 / 5%),
+    inset 0 0 60px rgb(0 100 200 / 3%);
+  backdrop-filter: blur(20px);
 
-  /* 使用自定义滑入动画 */
-  animation: slide-in-out cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  /* 纯淡入淡出动画 - 无滑入效果 */
+  animation:
+    fade-in-out 0.6s ease-in-out forwards,
+    border-glow 0.8s ease-in-out infinite alternate;
 }
 
-@keyframes slide-in-out {
+@keyframes fade-in-out {
   0% {
-    top: var(--start-y);
-    left: var(--start-x);
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3) rotate(var(--rotation, 0deg));
+    filter: blur(10px);
+    transform: translate(-50%, -50%) rotateY(90deg) scale(0.5);
   }
 
   15% {
-    top: var(--end-y);
-    left: var(--end-x);
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1) rotate(var(--rotation, 0deg));
+    filter: blur(0);
+    transform: translate(-50%, -50%) rotateY(0deg) scale(1);
   }
 
-  70% {
-    top: var(--end-y);
-    left: var(--end-x);
+  85% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1) rotate(var(--rotation, 0deg));
+    filter: blur(0);
+    transform: translate(-50%, -50%) rotateY(0deg) scale(1);
   }
 
   100% {
-    top: calc(var(--end-y) + 5%);
-    left: var(--end-x);
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.7) rotate(var(--rotation, 0deg));
+    filter: blur(10px);
+    transform: translate(-50%, -50%) rotateY(-90deg) scale(0.5);
   }
 }
 
@@ -677,12 +766,82 @@ onUnmounted(() => {
 
 .app-title {
   margin: 0;
-  font-size: 1.8rem;
-  font-weight: 500;
-  letter-spacing: 0.15em;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-align: center;
-  text-shadow: 0 2px 20px rgb(0 0 0 / 50%);
-  color: rgb(255 255 255 / 80%);
+  text-shadow: none;
+  filter: drop-shadow(0 0 20px rgb(0 245 255 / 50%));
+  background: linear-gradient(
+    90deg,
+    #00f5ff 0%,
+    #00d4ff 25%,
+    #7b2cbf 50%,
+    #00d4ff 75%,
+    #00f5ff 100%
+  );
+  color: #fff;
+  background-size: 200% auto;
+  background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: title-shimmer 3s linear infinite;
+}
+
+.title-wait {
+  animation: title-pulse 2s ease-in-out infinite;
+}
+
+.title-result {
+  animation: title-glow 1.5s ease-in-out infinite alternate;
+}
+
+.title-scanning {
+  animation: title-scan 1s ease-in-out infinite;
+}
+
+@keyframes title-shimmer {
+  0% {
+    background-position: 0% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes title-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes title-glow {
+  0% {
+    filter: drop-shadow(0 0 20px rgb(0 245 255 / 50%));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 40px rgb(123 44 191 / 80%));
+  }
+}
+
+@keyframes title-scan {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* 当前食物展示 */
@@ -737,6 +896,69 @@ onUnmounted(() => {
     0 0 40px rgb(255 150 0 / 50%),
     0 2px 8px rgb(0 0 0 / 50%);
   color: #ffd700;
+}
+
+/* 初始状态 */
+.initial-state {
+  display: flex;
+  border: 1px solid rgb(0 245 255 / 30%);
+  border-radius: 24px;
+  padding: 50px 40px;
+  background: linear-gradient(
+    135deg,
+    rgb(0 245 255 / 10%) 0%,
+    rgb(123 44 191 / 10%) 100%
+  );
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 0 30px rgb(0 245 255 / 20%),
+    inset 0 0 30px rgb(0 245 255 / 5%);
+}
+
+.initial-icon {
+  font-size: 5rem;
+  animation: tech-float 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgb(0 245 255 / 60%));
+}
+
+.initial-text {
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgb(0 245 255 / 80%);
+}
+
+@keyframes tech-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  25% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  75% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 /* 选择中指示器 */
