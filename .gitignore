@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+openspec
+.opencode
+.trae
+.github/prompts
+.github/skills
